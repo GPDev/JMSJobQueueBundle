@@ -178,6 +178,15 @@ class Job
      */
     private $relatedEntities;
 
+	/**
+	 * @ORM\ManyToMany(targetEntity="JobTag", cascade={"persist", "detach"})
+	 * @ORM\JoinTable(name="jms_job_jobs_tags",
+	 *     joinColumns = { @ORM\JoinColumn(name = "job_id", referencedColumnName = "id") },
+	 *     inverseJoinColumns = { @ORM\JoinColumn(name = "tag_id", referencedColumnName = "id")}
+	 * )
+	 */
+	private $tags;
+
     public static function create($command, array $args = array(), $confirmed = true, $queue = self::DEFAULT_QUEUE, $priority = self::PRIORITY_DEFAULT)
     {
         return new self($command, $args, $confirmed, $queue, $priority);
@@ -222,6 +231,7 @@ class Job
         $this->dependencies = new ArrayCollection();
         $this->retryJobs = new ArrayCollection();
         $this->relatedEntities = new ArrayCollection();
+	    $this->tags = new ArrayCollection();
     }
 
     public function __clone()
@@ -240,6 +250,7 @@ class Job
         $this->memoryUsage = null;
         $this->memoryUsageReal = null;
         $this->relatedEntities = new ArrayCollection();
+	    $this->tags = new ArrayCollection();
     }
 
     public function getId()
@@ -661,4 +672,52 @@ class Job
 
         return true;
     }
+
+	/**
+	 * @param <JobTag|ArrayCollection|array|string> $tag
+	 * @return $this
+	 */
+	public function addTag($tag)
+	{
+		if (is_string($tag)) {
+			$name = $tag;
+			$tag = new JobTag();
+			$tag->setName($name);
+		} elseif (is_array($tag) || $tag instanceof ArrayCollection) {
+			foreach($tag as $single) {
+				$this->addTag($single);
+			}
+			return $this;
+		}
+		if ($tag instanceof JobTag) {
+			foreach($this->tags as $defined) {
+				if ($defined->getName() == $tag->getName()) {
+					return $this;
+				}
+			}
+		} else {
+			throw new \RuntimeException('$tag must be an array, a string, an ArrayCollection or an instance of JobTag');
+		}
+		$this->tags->add($tag);
+		return $this;
+	}
+
+	/**
+	 * Shorthand method for addTag
+	 *
+	 * @param <JobTag|ArrayCollection|array|string> $tags
+	 * @return Job
+	 */
+	public function tag($tags)
+	{
+		return $this->addTag($tags);
+	}
+
+	/**
+	 * @return ArrayCollection|JobTag[]
+	 */
+	public function getTags()
+	{
+		return $this->tags;
+	}
 }

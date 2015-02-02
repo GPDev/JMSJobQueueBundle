@@ -171,6 +171,57 @@ class JobManager
                    ->getOneOrNullResult();
     }
 
+	public function findJobsForTags($tags, array $states = array())
+	{
+		if (! is_array($tags)) {
+			$tags = array($tags);
+		}
+
+		$rsm = new ResultSetMappingBuilder($this->_em);
+		$rsm->addRootEntityFromClassMetadata('JMSJobQueueBundle:Job', 'j');
+
+		$sql = "SELECT j.* FROM jms_jobs j INNER JOIN jms_job_jobs_tags jjt ON j.id = jjt.job_id INNER JOIN jms_job_tags jt ON jjt.tag_id = jt.id WHERE jt.name IN (:tags)";
+		$params = new ArrayCollection();
+		$params->add(new Parameter('tags', $tags, Connection::PARAM_STR_ARRAY));
+
+		if ( ! empty($states)) {
+			$sql .= " AND j.state IN (:states)";
+			$params->add(new Parameter('states', $states, Connection::PARAM_STR_ARRAY));
+		}
+
+		return $this->_em->createNativeQuery($sql, $rsm)
+			->setParameters($params)
+			->getResult();
+	}
+
+	public function findJobsForRelatedEntityAndTags($relatedEntity, $tags, array $states = array())
+	{
+		list($relClass, $relId) = $this->getRelatedEntityIdentifier($relatedEntity);
+
+		if (! is_array($tags)) {
+			$tags = array($tags);
+		}
+
+		$rsm = new ResultSetMappingBuilder($this->_em);
+		$rsm->addRootEntityFromClassMetadata('JMSJobQueueBundle:Job', 'j');
+
+		$sql = "SELECT j.* FROM jms_jobs j INNER JOIN jms_job_related_entities r ON r.job_id = j.id INNER JOIN jms_job_jobs_tags jjt ON j.id = jjt.job_id
+INNER JOIN jms_job_tags jt ON jjt.tag_id = jt.id WHERE r.related_class = :relClass AND r.related_id = :relId AND jt.name IN (:tags)";
+		$params = new ArrayCollection();
+		$params->add(new Parameter('tags', $tags, Connection::PARAM_STR_ARRAY));
+		$params->add(new Parameter('relClass', $relClass));
+		$params->add(new Parameter('relId', $relId));
+
+		if ( ! empty($states)) {
+			$sql .= " AND j.state IN (:states)";
+			$params->add(new Parameter('states', $states, Connection::PARAM_STR_ARRAY));
+		}
+
+		return $this->_em->createNativeQuery($sql, $rsm)
+			->setParameters($params)
+			->getResult();
+	}
+
     private function getRelatedEntityIdentifier($entity)
     {
         if ( ! is_object($entity)) {
