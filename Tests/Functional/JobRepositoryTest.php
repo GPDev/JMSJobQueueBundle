@@ -143,6 +143,71 @@ class JobRepositoryTest extends BaseTestCase
         $this->assertEquals($a->getId(), $reloadedB->getRelatedEntities()->first()->getId());
     }
 
+	public function testInsertSameTagOnJobs()
+	{
+		$a = new Job('a');
+		$b = new Job('b');
+		$b->addTag('tag');
+		$a->addTag('tag');
+		$this->em->persist($a);
+		$this->em->persist($b);
+		$this->em->flush();
+		$this->em->clear();
+
+		$this->assertFalse($this->em->contains($b));
+		$this->assertEquals(count($this->em->getRepository('JMSJobQueueBundle:JobTag')->findAll()), 1);
+	}
+
+	public function testFindJobByTags()
+	{
+		$a = new Job('a');
+		$a->tag('tag');
+		$b = new Job('b');
+		$b->addTag('tag');
+		$b->addTag('tag1');
+		$this->em->persist($a);
+		$this->em->persist($b);
+		$this->em->flush();
+		$this->em->clear();
+
+		$this->assertFalse($this->em->contains($b));
+
+		$tag = $this->repo->findJobsForTags('tag');
+		$this->assertNotNull($tag);
+		$this->assertEquals(2, count($tag));
+
+		$tag1 = $this->repo->findJobsForTags('tag1');
+		$this->assertNotNull($tag1);
+		$this->assertEquals(1, count($tag1));
+
+		$tags = $this->repo->findJobsForTags(array('tag1', 'tag'));
+		$this->assertNotNull($tags);
+		$this->assertEquals(2, count($tags));
+	}
+
+	public function testFindJobForRelatedEntityAndTags()
+	{
+		$a = new Job('a');
+		$b = new Job('b');
+		$b->addRelatedEntity($a);
+		$b->addTag('tag');
+		$b2 = new Job('b');
+		$this->em->persist($a);
+		$this->em->persist($b);
+		$this->em->persist($b2);
+		$this->em->flush();
+		$this->em->clear();
+
+		$this->assertFalse($this->em->contains($b));
+
+		$reloadedB = $this->repo->findJobsForRelatedEntityAndTags($a, 'tag');
+		$this->assertNotNull($reloadedB);
+		$this->assertEquals($b->getId(), $reloadedB[0]->getId());
+		$this->assertCount(1, $reloadedB[0]->getRelatedEntities());
+		$this->assertEquals($a->getId(), $reloadedB[0]->getRelatedEntities()->first()->getId());
+		$this->assertEquals('tag', $reloadedB[0]->getTags()->first()->getName());
+	}
+
     public function testFindStartableJobDetachesNonStartableJobs()
     {
         $a = new Job('a');

@@ -19,6 +19,7 @@
 namespace JMS\JobQueueBundle\Tests\Entity;
 
 use JMS\JobQueueBundle\Entity\Job;
+use JMS\JobQueueBundle\Entity\JobTag;
 
 class JobTest extends \PHPUnit_Framework_TestCase
 {
@@ -250,4 +251,32 @@ class JobTest extends \PHPUnit_Framework_TestCase
         $ref->setAccessible(true);
         $ref->setValue($obj, $value);
     }
+
+	public function testAddTag()
+	{
+		$job = new Job('job');
+		$tagString = 'tag0';
+		$tagArray = ['tag1', 'tag2'];
+		$tagObject = (new JobTag)->setName('tag3');
+		$this->assertCount(0, $job->getTags());
+
+		$job->addTag($tagString);
+		$this->assertCount(1, $job->getTags());
+		$job->tag($tagArray);
+		$this->assertCount(3, $job->getTags());
+		$job->tag($tagObject);
+		$this->assertCount(4, $job->getTags());
+		$this->assertSame($tagString, $job->getTags()->first()->getName());
+	}
+
+	public function testSameTagIsNotAddedTwice()
+	{
+		$job = new Job('job');
+
+		$this->assertCount(0, $job->getTags());
+		$job->addTag('tag');
+		$this->assertCount(1, $job->getTags());
+		$job->addTag('tag');
+		$this->assertCount(1, $job->getTags());
+	}
 }
