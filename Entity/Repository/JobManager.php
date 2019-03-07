@@ -177,7 +177,7 @@ class JobManager
 			$tags = array($tags);
 		}
 
-		$rsm = new ResultSetMappingBuilder($this->_em);
+		$rsm = new ResultSetMappingBuilder($this->getJobManager());
 		$rsm->addRootEntityFromClassMetadata('JMSJobQueueBundle:Job', 'j');
 
 		$sql = "SELECT j.* FROM jms_jobs j INNER JOIN jms_job_jobs_tags jjt ON j.id = jjt.job_id INNER JOIN jms_job_tags jt ON jjt.tag_id = jt.id WHERE jt.name IN (:tags)";
@@ -189,7 +189,7 @@ class JobManager
 			$params->add(new Parameter('states', $states, Connection::PARAM_STR_ARRAY));
 		}
 
-		return $this->_em->createNativeQuery($sql, $rsm)
+		return $this->getJobManager()->createNativeQuery($sql, $rsm)
 			->setParameters($params)
 			->getResult();
 	}
@@ -202,7 +202,7 @@ class JobManager
 			$tags = array($tags);
 		}
 
-		$rsm = new ResultSetMappingBuilder($this->_em);
+		$rsm = new ResultSetMappingBuilder($this->getJobManager());
 		$rsm->addRootEntityFromClassMetadata('JMSJobQueueBundle:Job', 'j');
 
 		$sql = "SELECT j.* FROM jms_jobs j INNER JOIN jms_job_related_entities r ON r.job_id = j.id INNER JOIN jms_job_jobs_tags jjt ON j.id = jjt.job_id
@@ -217,7 +217,7 @@ INNER JOIN jms_job_tags jt ON jjt.tag_id = jt.id WHERE r.related_class = :relCla
 			$params->add(new Parameter('states', $states, Connection::PARAM_STR_ARRAY));
 		}
 
-		return $this->_em->createNativeQuery($sql, $rsm)
+		return $this->getJobManager()->createNativeQuery($sql, $rsm)
 			->setParameters($params)
 			->getResult();
 	}
