@@ -66,6 +66,9 @@ class Job
     /** State if job exceeds its configured maximum runtime. */
     const STATE_TERMINATED = 'terminated';
 
+    /** State if job exceeds its configured maximum retry. */
+    const STATE_RETRY_CANCELED = 'retry_canceled';
+
     /**
      * State if an error occurs in the runner command.
      *
@@ -169,6 +172,9 @@ class Job
 
     /** @ORM\Column(type = "integer", name="memoryUsageReal", nullable = true, options = {"unsigned": true}) */
     private $memoryUsageReal;
+
+    /** @ORM\Column(type = "integer") */
+    private $retry = 0;
 
     /**
      * This may store any entities which are related to this job, and are
@@ -302,7 +308,7 @@ class Job
 
         switch ($this->state) {
             case self::STATE_NEW:
-                if ( ! in_array($newState, array(self::STATE_PENDING, self::STATE_CANCELED), true)) {
+                if ( ! in_array($newState, array(self::STATE_PENDING, self::STATE_CANCELED, self::STATE_RETRY_CANCELED), true)) {
                     throw new InvalidStateTransitionException($this, $newState, array(self::STATE_PENDING, self::STATE_CANCELED));
                 }
 
@@ -310,10 +316,14 @@ class Job
                     $this->closedAt = new \DateTime();
                 }
 
+                if (self::STATE_RETRY_CANCELED === $newState) {
+                    $this->closedAt = new \DateTime();
+                }
+
                 break;
 
             case self::STATE_PENDING:
-                if ( ! in_array($newState, array(self::STATE_RUNNING, self::STATE_CANCELED), true)) {
+                if ( ! in_array($newState, array(self::STATE_RUNNING, self::STATE_CANCELED, self::STATE_RETRY_CANCELED), true)) {
                     throw new InvalidStateTransitionException($this, $newState, array(self::STATE_RUNNING, self::STATE_CANCELED));
                 }
 
@@ -321,6 +331,8 @@ class Job
                     $this->startedAt = new \DateTime();
                     $this->checkedAt = new \DateTime();
                 } else if ($newState === self::STATE_CANCELED) {
+                    $this->closedAt = new \DateTime();
+                } else if (self::STATE_RETRY_CANCELED === $newState) {
                     $this->closedAt = new \DateTime();
                 }
 
@@ -332,7 +344,9 @@ class Job
                 }
 
                 $this->closedAt = new \DateTime();
-
+                if (self::STATE_FAILED && $this->retry > 5) {
+                    $this->setState(self::STATE_RETRY_CANCELED);
+                }
                 break;
 
             case self::STATE_FINISHED:
@@ -345,7 +359,8 @@ class Job
                 throw new LogicException('The previous cases were exhaustive. Unknown state: '.$this->state);
         }
 
-        $this->state = $newState;
+        if ($this->state != self::STATE_RETRY_CANCELED)
+            $this->state = $newState;
     }
 
     public function getCreatedAt()
@@ -720,4 +735,24 @@ class Job
 	{
 		return $this->tags;
 	}
+
+    /**
+     * Shorthand method for addTag
+     *
+     * @param int $retry
+     * @return Job
+     */
+    public function setRetry($retry)
+    {
+        $this->retry = $retry;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getRetry()
+    {
+        return $this->retry;
+    }
 }
