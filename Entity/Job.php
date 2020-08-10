@@ -345,7 +345,7 @@ class Job
 
                 $this->closedAt = new \DateTime();
                 if ($newState = self::STATE_FAILED && $this->retry > 5) {
-                    $this->setState(self::STATE_RETRY_CANCELED);
+                    $this->state = self::STATE_RETRY_CANCELED;
                 }
                 break;
 
