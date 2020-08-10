@@ -339,12 +339,12 @@ class Job
                 break;
 
             case self::STATE_RUNNING:
-                if ( ! in_array($newState, array(self::STATE_FINISHED, self::STATE_FAILED, self::STATE_TERMINATED, self::STATE_INCOMPLETE))) {
+                if ( ! in_array($newState, array(self::STATE_FINISHED, self::STATE_FAILED, self::STATE_TERMINATED, self::STATE_INCOMPLETE, self::STATE_RETRY_CANCELED))) {
                     throw new InvalidStateTransitionException($this, $newState, array(self::STATE_FINISHED, self::STATE_FAILED, self::STATE_TERMINATED, self::STATE_INCOMPLETE));
                 }
 
                 $this->closedAt = new \DateTime();
-                if (self::STATE_FAILED && $this->retry > 5) {
+                if ($newState = self::STATE_FAILED && $this->retry > 5) {
                     $this->setState(self::STATE_RETRY_CANCELED);
                 }
                 break;
