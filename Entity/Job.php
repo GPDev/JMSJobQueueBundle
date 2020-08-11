@@ -173,7 +173,7 @@ class Job
     /** @ORM\Column(type = "integer", name="memoryUsageReal", nullable = true, options = {"unsigned": true}) */
     private $memoryUsageReal;
 
-    /** @ORM\Column(type = "integer") */
+    /** @ORM\Column(type = "smallint", options = {"unsigned": true}) */
     private $retry = 0;
 
     /**
